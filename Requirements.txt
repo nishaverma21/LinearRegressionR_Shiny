@@ -1,0 +1,2 @@
+R-Studio
+R packages (shiny,shinydashboard,ggplot2,gridExtra,caTools,DT,dplyr,shinyalert,caret,ERSA,jtools,ggstance)
