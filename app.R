@@ -34,7 +34,7 @@ ui <-
     dashboardBody(
       
       tabItems(
-        # Dashboard tab content
+        # NV_UI_DASHBOARD
         tabItem(tabName = "dashboard",
                 fluidRow(
                   h5("User Need to complete other tabs before clicking 'Click Here' below !!!",align = "center",style = "color:grey"),
@@ -79,23 +79,23 @@ ui <-
                 )
                 
         ),
-        # Upload File tab content
+        # NV_UI_UPLOADDATA
         tabItem(tabName="data",
                 useShinyalert(),
                 fileInput('file1', em('Upload test data in csv format'),accept=".csv")
         ),
-        # Table tab content
+        # NV_UI_TABLE
         tabItem(tabName = "table",
                 h3("Few records of uploaded data"),
                 mainPanel(tableOutput("dataTable"),style = "width: 75%")
         ),
-        # Summary tab content
+        # NV_UI_SUMMARY
         tabItem(tabName = "summary",
                 h3('Summary  of uploaded data'),
                 mainPanel(verbatimTextOutput("sum"))
         ),
         
-        # Plots tab content
+        # NV_UI_PLOTS
         tabItem(tabName = "plots",
                 h3('Different plots of uploaded data'),
                 sidebarLayout(
@@ -107,7 +107,7 @@ ui <-
                   mainPanel("Plot", plotOutput("box"))
                 )
         ),
-        # Clean Data tab content
+        # NV_UI_CLEANDATA
         tabItem(tabName = "cleanData",
                 h3('Clean Data before creating Model by selecting variable, arithmetic operator and
                    enter value'),
@@ -119,14 +119,14 @@ ui <-
                     uiOutput("CleanRowsOption"),
                     textInput("Value", "Enter a Value", value = ""),
                     tags$head(tags$script(src = "message-handler.js")),
-                    actionButton("CleanRowSubmiSt","Clean Data"),
+                    actionButton("CleanRowSubmit","Clean Data"),
                     br(),br(),
                     actionButton("CleanDataSummary","Data Summary")),
                   #  br(),br(),
                   # actionButton("nextEdit","Next Edit")),
                   mainPanel(verbatimTextOutput("CleanDataSum")))
                 ),
-        # Model tab content
+        # NV_UI_MODEL
         tabItem(tabName = "model",
                 h3('Generate linear model from uploaded data'),
                 sidebarLayout(
@@ -144,7 +144,7 @@ ui <-
                   )
                   
                 )),
-        # Prediction tab content
+        # NV_UI_PREDICTIONS
         tabItem(tabName = "predict",
                 h3("Prediction with linear model on uploaded data"),
                 mainPanel(actionButton("predict","Prediction"),
@@ -153,7 +153,7 @@ ui <-
                           br(),br(),
                           DT::dataTableOutput('mytable') )
         ),
-        # Download tab content
+        # NV_UI_DOWNLOADPREDICTIONS 
         tabItem(tabName = "download",
                 h3("Download Predictions"),
                 downloadButton("downloadPrediction", "Download")
@@ -174,15 +174,15 @@ server <- function(input, output,session) {
   set.seed(122)
   histdata <- rnorm(500)
   
-  #************************** UPLOAD DATA *******************************************
+  #************************** NV_SERVER_UPLOADDATA *******************************************
   # Exit Criteria 1 : Load correct format of file
   
-  # Uploaded file content reactive
+  # NV_SERVER_Uploadata
   dataset <- reactive({
     dataset<-read.csv(input$file1$datapath)
   })
   
-  #************************** TABLE *******************************************
+  #************************** NV_SERVER_TABLE *******************************************
   
   # Uploaded file in table format
   output$dataTable <- renderTable({
@@ -191,7 +191,7 @@ server <- function(input, output,session) {
     head(dataset(),15)
   })
   
-  #************************** SUMMARY *******************************************
+  #************************** NV_SERVER_SUMMARY *******************************************
   
   # Summary of loaded data
   output$sum <- renderPrint({
@@ -224,38 +224,38 @@ server <- function(input, output,session) {
     }
     
     )
+  # Value entered by user
   Value<-reactive({input$Value})
   
+  # Airthmetic operator selected
   SelectedOptions<- reactive({input$Options})
   
+  # Clean data action button
   observeEvent(input$CleanRowSubmit, {
-    isolate({
-      
-      
+      dataset<-dataset()
+      variabelToclean<-input$CleanRows
+      print(nrow(dataset))
       if(SelectedOptions()=='Equal'){
-        dataset<-dataset()
-        variabelToclean<-input$CleanRows
-        dataset<<-reactive({
+          dataset<<-reactive({
           dataset<<-dataset[!(dataset[paste(variabelToclean)]==as.double(Value())),]
-        })
+          
+           })
+          print(nrow(dataset))
       }
       if(SelectedOptions()=='Less'){
-        dataset<-dataset()
-        variabelToclean<-input$CleanRows
+
         dataset<<-reactive({
           dataset<<-dataset[!(dataset[paste(variabelToclean)]<as.double(Value())),]
         })
       }
       if(SelectedOptions()=='Greater'){
-        dataset<-dataset()
-        variabelToclean<-input$CleanRows
-        dataset<<-reactive({
+          dataset<<-reactive({
           dataset<<-dataset[!(dataset[paste(variabelToclean)]>as.double(Value())),]
         })
       }
       
     })
-  })
+
   observeEvent(input$CleanDataSummary,{
     output$CleanDataSum<-renderPrint({
       summary(dataset())})
@@ -264,7 +264,7 @@ server <- function(input, output,session) {
   #   observeEvent(input$nextEdit,{
   #      shinyjs::reset("side-panel")
   #    })
-  #************************** PLOTS *******************************************
+  #************************** NV_SERVER_PLOTS *******************************************
   
   # Select Y variable 
   output$PlotY <- 
@@ -309,23 +309,23 @@ server <- function(input, output,session) {
     if (is.null(input$X_ax)) {
       return(NULL)
     } else{
-      p<-ggplot(data = dataset(),mapping = aes(eval(as.name(input$X_ax)), eval(as.name(input$Y_ax)),color=eval(as.name(input$Legend))))+theme(legend.title = element_blank()) 
+      p<-ggplot(data = dataset(),mapping = aes(eval(as.name(input$X_ax)), eval(as.name(input$Y_ax))))+theme(legend.title = element_blank()) 
       if ((as.name(input$PlotType))=='Box Plot')
       {
-        p+geom_boxplot(notch = FALSE)+xlab(input$X_ax)+ylab(input$Y_ax)
+        p+geom_boxplot(notch = FALSE,aes(fill=eval(as.name(input$Legend))))+xlab(input$X_ax)+ylab(input$Y_ax)
       }
       else if ((as.name(input$PlotType))=='Scatter Plot')
       {
-        p+geom_jitter()+xlab(input$X_ax)+ylab(input$Y_ax)
+        p+geom_jitter(aes(color=eval(as.name(input$Legend))))+xlab(input$X_ax)+ylab(input$Y_ax)
       }
       else
       {
-        p+geom_bar(stat='Identity',notch = FALSE)+xlab(input$X_ax)+ylab(input$Y_ax)
+        p+geom_bar(stat='Identity',notch = FALSE,aes(fill=eval(as.name(input$Legend))))+xlab(input$X_ax)+ylab(input$Y_ax)
       }
     }
   })
   
-  #************************** MODEL *******************************************
+  #************************** NV_SERVER_MODEL *******************************************
   
   # Select Target  
   output$Target <- 
@@ -373,7 +373,7 @@ server <- function(input, output,session) {
     shinyjs::reset("side-panel")
   })
   
-  #************************** PREDICTIONS *******************************************
+  #************************** NV_SERVER_PREDICTIONS *******************************************
   
   # Display Target used for model
   output$TargetOfModel<-reactive({input$Target})
@@ -403,7 +403,7 @@ server <- function(input, output,session) {
       ) )
 })
   
-  #************************** DOWNLOAD PREDICTIONS *******************************************
+  #************************** NV_SERVER_DOWNLOADPREDICTIONS *******************************************
   
   # Download Prediction on Uploaded data
   output$downloadPrediction <- downloadHandler(
@@ -415,7 +415,7 @@ server <- function(input, output,session) {
     }
   )
   
-  #************************** DASHBOARD *******************************************
+  #************************** NV_SERVER_DASHBOARD *******************************************
   
   # Prediction Value Summary with created model
   output$PredictedSummary <- renderPrint({
