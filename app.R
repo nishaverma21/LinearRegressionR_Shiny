@@ -1,3 +1,4 @@
+rm(list=ls())
 #************************** LOAD ALL REQUIRED LIBRARIES*******************************
 library(shiny)
 library(shinydashboard)
@@ -31,10 +32,10 @@ ui <-
     ),
     #************************** DASHBOARD BODY*******************************
     
+    # NV_UI_DASHBOARD
     dashboardBody(
       
       tabItems(
-        # NV_UI_DASHBOARD
         tabItem(tabName = "dashboard",
                 fluidRow(
                   h5("User Need to complete other tabs before clicking 'Click Here' below !!!",align = "center",style = "color:grey"),
@@ -66,8 +67,6 @@ ui <-
                     br(),br(),
                     plotOutput("TStaticDashboard")
                   ),
-                  
-                  
                   box(
                     h2("Fitted Plot",align = "center",style = "color:blue"),
                     actionButton("FittedPlot","Click Here"),
@@ -113,8 +112,8 @@ ui <-
                    enter value'),
                 sidebarLayout(
                   sidebarPanel(
-                    shinyjs::useShinyjs(),
-                    id="side-panel",
+                   # shinyjs::useShinyjs(),
+                    #id="side-panel",
                     uiOutput("CleanRows"),
                     uiOutput("CleanRowsOption"),
                     textInput("Value", "Enter a Value", value = ""),
@@ -122,8 +121,6 @@ ui <-
                     actionButton("CleanRowSubmit","Clean Data"),
                     br(),br(),
                     actionButton("CleanDataSummary","Data Summary")),
-                  #  br(),br(),
-                  # actionButton("nextEdit","Next Edit")),
                   mainPanel(verbatimTextOutput("CleanDataSum")))
                 ),
         # NV_UI_MODEL
@@ -142,8 +139,7 @@ ui <-
                     br(), br(), br()),
                   mainPanel(verbatimTextOutput(outputId = "ModelSum")
                   )
-                  
-                )),
+               )),
         # NV_UI_PREDICTIONS
         tabItem(tabName = "predict",
                 h3("Prediction with linear model on uploaded data"),
@@ -158,63 +154,50 @@ ui <-
                 h3("Download Predictions"),
                 downloadButton("downloadPrediction", "Download")
         )
-        
-        
-        
     ) # Tab Item Ends
   ) # Dashboard Body Ends
-  
-  
   ) # UI Ends
-
-
 #************************** SERVER COMMUNICATION *******************************************
 server <- function(input, output,session) { 
-  
   set.seed(122)
   histdata <- rnorm(500)
-  
-  #************************** NV_SERVER_UPLOADDATA *******************************************
-  # Exit Criteria 1 : Load correct format of file
-  
+ #************************** NV_SERVER_UPLOADDATA *******************************************
   # NV_SERVER_Uploadata
   dataset <- reactive({
     dataset<-read.csv(input$file1$datapath)
   })
-  
   #************************** NV_SERVER_TABLE *******************************************
-  
   # Uploaded file in table format
   output$dataTable <- renderTable({
     if(is.null(input$file1))     
       return(NULL) 
-    head(dataset(),15)
+    data<-dataset()
+    head(data,15)
   })
-  
   #************************** NV_SERVER_SUMMARY *******************************************
-  
-  # Summary of loaded data
+ # Summary of loaded data
   output$sum <- renderPrint({
     if(is.null(input$file1)) {
       text<-'No file loaded'
       session$sendCustomMessage(type='jsCode', list(value = text))
     }
     else {
-      data<<-dataset()
+      data<-dataset()
       summary(data)
     }
   })
-  # Clean Rows
+  #************************** NV_SERVER_CLEANDATA *******************************************
+    # Select Data frame variable
   output$CleanRows <- 
     renderUI({
       if(is.null(input$file1)) {
         return(NULL) 
       }
+      data<-dataset()
       selectInput("CleanRows","Select a Variable", choices = names(data[,!names(data) %in%  names(Filter(is.factor, data))]),multiple = FALSE)
     }
-    
     )
-  # CleanRowsOptions
+  # Select Airthmetic Operator
   output$CleanRowsOption <- 
     renderUI({
       if(is.null(input$file1)) {
@@ -222,48 +205,41 @@ server <- function(input, output,session) {
       }
       selectInput("Options","Arithmetic Operator", choices = c("Equal","Greater","Less"),multiple = FALSE)
     }
-    
-    )
-  # Value entered by user
+   )
+  # Enter value to remove rows with 
   Value<-reactive({input$Value})
   
-  # Airthmetic operator selected
+  # Reactive Airthmetic operator selected
   SelectedOptions<- reactive({input$Options})
   
   # Clean data action button
   observeEvent(input$CleanRowSubmit, {
       dataset<-dataset()
       variabelToclean<-input$CleanRows
-      print(nrow(dataset))
       if(SelectedOptions()=='Equal'){
           dataset<<-reactive({
           dataset<<-dataset[!(dataset[paste(variabelToclean)]==as.double(Value())),]
-          
-           })
-          print(nrow(dataset))
-      }
-      if(SelectedOptions()=='Less'){
-
-        dataset<<-reactive({
-          dataset<<-dataset[!(dataset[paste(variabelToclean)]<as.double(Value())),]
         })
       }
-      if(SelectedOptions()=='Greater'){
+      else if(SelectedOptions()=='Less'){
+        dataset<<-reactive({
+          dataset<<-dataset[!(dataset[paste(variabelToclean)]<as.double(Value())),]
+     })
+      }
+      else #(SelectedOptions()=='Greater')
+        {
           dataset<<-reactive({
           dataset<<-dataset[!(dataset[paste(variabelToclean)]>as.double(Value())),]
         })
       }
       
     })
-
+  # Display summary on cleandata tab
   observeEvent(input$CleanDataSummary,{
     output$CleanDataSum<-renderPrint({
       summary(dataset())})
   })
-  
-  #   observeEvent(input$nextEdit,{
-  #      shinyjs::reset("side-panel")
-  #    })
+
   #************************** NV_SERVER_PLOTS *******************************************
   
   # Select Y variable 
@@ -296,9 +272,11 @@ server <- function(input, output,session) {
       if(is.null(input$file1)) {
         return(NULL) 
       }
-      selectInput("Legend","Select Legend", choices = names(Filter(is.factor, data)))})
+      data<-dataset()
+      selectInput("Legend","Select Legend", choices = names(Filter(is.factor, data)))
+      })
   
-  # Generate Plot with selected X, Y and Type of Plot
+  # Generate Plot with selected X, Y, legend and Type of Plot
   output$box <- renderPlot({
     if(is.null(input$file1)) {
       return(NULL) 
@@ -333,7 +311,7 @@ server <- function(input, output,session) {
       if(is.null(input$file1)) {
         return(NULL) 
       }
-      data<<-dataset()
+      data<-dataset()
       selectInput("Target","Target", choices = names(data[,!names(data) %in%  names(Filter(is.factor, data))]),multiple = FALSE)}
     )
   # Select Multiple Predictors  
@@ -342,7 +320,7 @@ server <- function(input, output,session) {
       if(is.null(input$file1)) {
         return(NULL) 
       }
-      data<<-dataset()
+      data<-dataset()
       selectInput("Predictor","Predictor", choices = names(data[,!names(data) %in% input$Target]),multiple = TRUE)
     }
     
@@ -358,7 +336,7 @@ server <- function(input, output,session) {
     } 
     set.seed(2)
     SampleSize<-reactive({SampleSize<-as.double(as.double(input$TrainTest)/100)})
-    data<<-dataset()
+    data<-dataset()
     sample <- sample.split(data[paste(input$Target)], SplitRatio=as.double(SampleSize()))
     train <- subset(data, sample==TRUE)
     test <- subset(data, sample==FALSE)
@@ -386,9 +364,9 @@ server <- function(input, output,session) {
     if (is.null(input$Predictor)) {
       return(NULL)
     } 
-    prediction <- predict(model(), dataset())#test())
+    prediction <- predict(model(), dataset())
     predict_df <- data.frame(Predictions = prediction)
-    prediction_df <- cbind(predict_df,dataset())#test())
+    prediction_df <- cbind(predict_df,dataset())
     return(prediction_df)
   })
   
@@ -457,6 +435,8 @@ server <- function(input, output,session) {
         theme(legend.title = element_blank())
     })
   })
+  
+  # Fetch model smmarry attributes and display on dashboard
   ModelSumDashboard<-reactive({
     model<-model()
     data.frame(Sigma=summary(model)$sigma,Degree_of_Freedom=model$df.residual,R_Squared=summary(model)$r.squared,Adjusted_R_Squared=summary(model)$adj.r.squared, stringsAsFactors=FALSE)
@@ -466,12 +446,13 @@ server <- function(input, output,session) {
     output$ModelSumDashboard<-renderTable({
       ModelSumDashboard()
     })
-    
+  
+  # Dispay taget and predictors used in model creation
     output$DisplayTarget<-reactive({input$Target})
     
     output$DisplayPredictors<-reactive({list(input$Predictor)})
   })
-  
+  # Dispay T-Static plot
   observeEvent(input$TStaticDashboard, {
     output$TStaticDashboard<-renderPlot({
       model<-model()
@@ -479,7 +460,7 @@ server <- function(input, output,session) {
       plottStats(model,cols)
     })
   })
-  
+  # Dispay Model plot
   observeEvent(input$ModelSummaryDashboard, {
     output$ModelSummaryDashboard<-renderPlot({
       model<-model()
@@ -488,7 +469,7 @@ server <- function(input, output,session) {
     })
   })
   
-  # Generate Prediction Summary on dashboard after clicking action button
+  # Dispay F-Static plot
   observeEvent(input$FStaticDashboard, {
     output$FStaticDashboard<-renderPlot({
       model<-model()
