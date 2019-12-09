@@ -1,5 +1,23 @@
 rm(list=ls())
-#************************** LOAD ALL REQUIRED LIBRARIES*******************************
+
+#************************** Environment Setup *******************************
+
+if (!require(shiny)) install.packages('shiny')
+if (!require(shinydashboard)) install.packages('shinydashboard')
+if (!require(ggplot2)) install.packages('ggplot2')
+if (!require(gridExtra)) install.packages('gridExtra')
+if (!require(caTools)) install.packages('caTools')
+if (!require(DT)) install.packages('DT')
+if (!require(dplyr)) install.packages('dplyr')
+if (!require(shinyalert)) install.packages('shinyalert')
+if (!require(caret)) install.packages('caret')
+if (!require(ERSA)) install.packages('ERSA')
+if (!require(jtools)) install.packages('jtools')
+if (!require(ggstance)) install.packages('ggstance')
+if (!require(shinyjs)) install.packages('shinyjs')
+
+#************************** LOAD ALL REQUIRED LIBRARIES *******************************
+
 library(shiny)
 library(shinydashboard)
 library(ggplot2)
@@ -12,6 +30,7 @@ library(caret)
 library(ERSA)
 library(jtools)
 library(ggstance)
+library(shinyjs)
 #************************** USER INTERFASE *******************************************
 ui <- 
   dashboardPage(
@@ -218,18 +237,18 @@ server <- function(input, output,session) {
       variabelToclean<-input$CleanRows
       if(SelectedOptions()=='Equal'){
           dataset<<-reactive({
-          dataset<<-dataset[!(dataset[paste(variabelToclean)]==as.double(Value())),]
+          dataset<<-data.frame(dataset[!(dataset[paste(variabelToclean)]==as.double(Value())),])
         })
       }
       else if(SelectedOptions()=='Less'){
         dataset<<-reactive({
-          dataset<<-dataset[!(dataset[paste(variabelToclean)]<as.double(Value())),]
+          dataset<<-data.frame(dataset[!(dataset[paste(variabelToclean)]<as.double(Value())),])
      })
       }
       else #(SelectedOptions()=='Greater')
         {
           dataset<<-reactive({
-          dataset<<-dataset[!(dataset[paste(variabelToclean)]>as.double(Value())),]
+          dataset<<-data.frame(dataset[!(dataset[paste(variabelToclean)]>as.double(Value())),])
         })
       }
       
@@ -248,7 +267,7 @@ server <- function(input, output,session) {
       if(is.null(input$file1)) {
         return(NULL) 
       }
-      selectInput("Y_ax","Variable 1", choices = names(dataset()))})
+      selectInput("Y_ax","Variable For Y-axis", choices = names(dataset()))})
   
   # Select X variable 
   output$PlotX <- 
@@ -256,7 +275,8 @@ server <- function(input, output,session) {
       if(is.null(input$file1)) {
         return(NULL) 
       }
-      selectInput("X_ax","Variable 2", choices = names(dataset()))})
+      data<-dataset()
+      selectInput("X_ax","Variable For X-axis", choices =names(data[,!names(data) %in% input$Y_ax]))})
   
   # Select Type of Plot  
   output$TypeOfPlot <- 
